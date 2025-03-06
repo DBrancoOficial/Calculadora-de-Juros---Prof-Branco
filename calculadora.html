@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Juros</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; }
+        .container { display: flex; justify-content: center; align-items: center; max-width: 900px; margin: 30px auto; padding: 20px; background: white; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); border-radius: 10px; }
+        .inputs { flex: 1; padding: 20px; text-align: left; }
+        .inputs label, .inputs input, .inputs button { display: block; margin-bottom: 10px; width: 100%; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 5px; text-align: right; }
+        button { padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #218838; }
+        .chart-container { flex: 1; padding: 20px; }
+        canvas { max-width: 100%; height: 300px; }
+        .resultados { display: flex; justify-content: space-between; margin-top: 20px; padding: 10px; background: #e9ecef; border-radius: 10px; }
+        .resultado { text-align: center; flex: 1; padding: 10px; }
+        .resultado h4 { margin-bottom: 10px; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="inputs">
+            <h2>Calculadora de Juros</h2>
+            <label>Capital Inicial (R$): <input type="text" id="capital" value="1000" oninput="formatarNumero(this)"></label>
+            <label>Taxa de Juros (% ao mês): <input type="text" id="taxa" value="5" oninput="formatarNumero(this)"></label>
+            <label>Tempo (meses): <input type="text" id="periodo" value="12" oninput="formatarNumero(this)"></label>
+            <label>Aporte Mensal (R$): <input type="text" id="aporte" value="0" oninput="formatarNumero(this)"></label>
+            <button onclick="calcularJuros()">Gerar Gráfico</button>
+            <div class="resultados">
+                <div class="resultado">
+                    <h4>Juros Simples</h4>
+                    <p><strong>Montante:</strong> <span id="montanteSimples"></span></p>
+                    <p><strong>Total de Juros:</strong> <span id="jurosSimples"></span></p>
+                    <p><strong>Capital Investido:</strong> <span id="capitalSimples"></span></p>
+                </div>
+                <div class="resultado">
+                    <h4>Juros Compostos</h4>
+                    <p><strong>Montante:</strong> <span id="montanteCompostos"></span></p>
+                    <p><strong>Total de Juros:</strong> <span id="jurosCompostos"></span></p>
+                    <p><strong>Capital Investido:</strong> <span id="capitalCompostos"></span></p>
+                </div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="grafico"></canvas>
+        </div>
+    </div>
+    
+    <script>
+        function formatarNumero(campo) {
+            let valor = campo.value.replace(/\D/g, "");
+            valor = (parseFloat(valor) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            campo.value = valor;
+        }
+
+        function obterNumeroFormatado(id) {
+            return parseFloat(document.getElementById(id).value.replace(/\./g, '').replace(/,/g, '.')) || 0;
+        }
+
+        let chart;
+
+        function calcularJuros() {
+            let capital = obterNumeroFormatado('capital');
+            let taxa = obterNumeroFormatado('taxa') / 100;
+            let tempo = obterNumeroFormatado('periodo');
+            let aporte = obterNumeroFormatado('aporte');
+            
+            let simples = [], compostos = [], meses = [];
+            let capitalInvestidoSimples = capital + (aporte * tempo);
+            let capitalInvestidoCompostos = capital + (aporte * tempo);
+            
+            for (let i = 0; i <= tempo; i++) {
+                meses.push(i);
+                simples.push(capital * (1 + taxa * i) + (aporte * i));
+                compostos.push(i === 0 ? capital : (compostos[i-1] + aporte) * (1 + taxa));
+            }
+            
+            let montanteSimples = simples[tempo];
+            let montanteCompostos = compostos[tempo];
+            let jurosSimples = montanteSimples - capitalInvestidoSimples;
+            let jurosCompostos = montanteCompostos - capitalInvestidoCompostos;
+            
+            document.getElementById('montanteSimples').innerText = montanteSimples.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('jurosSimples').innerText = jurosSimples.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('capitalSimples').innerText = capitalInvestidoSimples.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('montanteCompostos').innerText = montanteCompostos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('jurosCompostos').innerText = jurosCompostos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('capitalCompostos').innerText = capitalInvestidoCompostos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            
+            let ctx = document.getElementById('grafico').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: meses,
+                    datasets: [
+                        { label: 'Juros Simples', data: simples, borderColor: 'blue', fill: false },
+                        { label: 'Juros Compostos', data: compostos, borderColor: 'red', fill: false }
+                    ]
+                },
+                options: { responsive: true, scales: { x: { title: { display: true, text: 'Meses' } }, y: { title: { display: true, text: 'Valor (R$)' } } } }
+            });
+        }
+    </script>
+</body>
+</html>
